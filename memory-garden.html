@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Garden</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: #f5f5f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .page {
+            display: none;
+            background: white;
+            border: 2px solid #666;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #444;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .memory-input {
+            width: 100%;
+            min-height: 150px;
+            padding: 20px;
+            border: 2px solid #999;
+            background: #fafafa;
+            font-size: 1.1em;
+            font-family: 'Georgia', serif;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+
+        .memory-input:focus {
+            outline: none;
+            border-color: #555;
+            background: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #666;
+            color: white;
+            border: none;
+            font-size: 1.1em;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            letter-spacing: 1px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .plant-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .plant-canvas {
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+            border: 2px solid #999;
+            background: #fafafa;
+        }
+
+        .controls {
+            margin-top: 40px;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #555;
+            letter-spacing: 1px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #666;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #666;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+        }
+
+        .garden-canvas {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #999;
+            background: #fafafa;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+        }
+
+        .garden-canvas:active {
+            cursor: grabbing;
+        }
+
+        .memory-plant {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+        }
+
+        .memory-plant canvas {
+            display: block;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 200px;
+            word-wrap: break-word;
+            display: none;
+        }
+
+        .emotion-indicator {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.2em;
+            color: #666;
+            font-style: italic;
+        }
+
+        .back-button {
+            background: #999;
+            margin-top: 20px;
+        }
+
+        .back-button:hover {
+            background: #777;
+        }
+
+        .garden-stats {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+
+        .garden-stats p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Page 01: Seeds of Memory -->
+        <div id="page1" class="page active">
+            <h1>Seeds of Memory</h1>
+            <textarea
+                id="memoryInput"
+                class="memory-input"
+                placeholder="Write a memory..."
+            ></textarea>
+            <button id="plantButton" onclick="plantMemory()">Plant</button>
+        </div>
+
+        <!-- Page 02: Growth -->
+        <div id="page2" class="page">
+            <h1>Growth</h1>
+            <div class="emotion-indicator" id="emotionIndicator"></div>
+            <div class="plant-container">
+                <canvas id="plantCanvas" class="plant-canvas" width="300" height="300"></canvas>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <label class="control-label">Water</label>
+                    <input
+                        type="range"
+                        class="slider"
+                        id="waterSlider"
+                        min="0"
+                        max="100"
+                        value="50"
+                        oninput="updatePlant()"
+                    >
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Pruning</label>
+                    <input
+                        type="range"
+                        class="slider"
+                        id="pruningSlider"
+                        min="0"
+                        max="100"
+                        value="50"
+                        oninput="updatePlant()"
+                    >
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Repositioning</label>
+                    <input
+                        type="range"
+                        class="slider"
+                        id="repositionSlider"
+                        min="0"
+                        max="100"
+                        value="50"
+                        oninput="updatePlant()"
+                    >
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button onclick="addToGarden()">Add to Garden</button>
+                <button class="back-button" onclick="showPage(1)">Back</button>
+            </div>
+        </div>
+
+        <!-- Page 03: Garden Landscape -->
+        <div id="page3" class="page">
+            <h1>Garden Landscape</h1>
+            <div class="garden-stats" id="gardenStats"></div>
+            <div class="garden-canvas" id="gardenCanvas"></div>
+            <div class="tooltip" id="tooltip"></div>
+            <button class="back-button" onclick="showPage(1)">Plant More Memories</button>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let currentMemory = {
+            text: '',
+            emotion: '',
+            water: 50,
+            pruning: 50,
+            reposition: 50,
+            x: 0,
+            y: 0
+        };
+
+        let garden = [];
+
+        // Load garden from localStorage
+        function loadGarden() {
+            const saved = localStorage.getItem('memoryGarden');
+            if (saved) {
+                garden = JSON.parse(saved);
+            }
+        }
+
+        // Save garden to localStorage
+        function saveGarden() {
+            localStorage.setItem('memoryGarden', JSON.stringify(garden));
+        }
+
+        // Sentiment Analysis
+        function analyzeEmotion(text) {
+            const lowerText = text.toLowerCase();
+
+            const emotionKeywords = {
+                happiness: ['happy', 'joy', 'love', 'wonderful', 'great', 'amazing', 'beautiful', 'smile', 'laugh', 'fun', 'excited', 'celebration', 'delight', 'cheerful', 'pleased'],
+                nostalgia: ['remember', 'used to', 'childhood', 'past', 'ago', 'old', 'memory', 'back then', 'once', 'miss', 'forgotten', 'yesterday', 'before', 'younger', 'time'],
+                regret: ['regret', 'sorry', 'wish', 'should have', 'mistake', 'wrong', 'failed', 'loss', 'missed', 'could have', 'if only', 'apologize', 'guilt', 'shame'],
+                anger: ['angry', 'hate', 'furious', 'mad', 'rage', 'annoyed', 'frustrated', 'bitter', 'upset', 'irritated', 'resentment', 'hostile', 'cruel', 'fight']
+            };
+
+            const scores = {
+                happiness: 0,
+                nostalgia: 0,
+                regret: 0,
+                anger: 0
+            };
+
+            for (const [emotion, keywords] of Object.entries(emotionKeywords)) {
+                for (const keyword of keywords) {
+                    if (lowerText.includes(keyword)) {
+                        scores[emotion]++;
+                    }
+                }
+            }
+
+            // Determine dominant emotion
+            let maxScore = 0;
+            let dominantEmotion = 'nostalgia'; // default
+
+            for (const [emotion, score] of Object.entries(scores)) {
+                if (score > maxScore) {
+                    maxScore = score;
+                    dominantEmotion = emotion;
+                }
+            }
+
+            return dominantEmotion;
+        }
+
+        // Draw Plant based on emotion
+        function drawPlant(canvas, emotion, water, pruning, reposition) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Calculate size based on water (growth)
+            const scale = 0.5 + (water / 100) * 0.8;
+
+            // Calculate opacity based on pruning (inverse - more pruning = less opacity)
+            const opacity = 1 - (pruning / 100) * 0.7;
+
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            ctx.translate(width / 2, height / 2);
+
+            // Draw based on emotion
+            switch(emotion) {
+                case 'happiness':
+                    drawHappinessPlant(ctx, scale, reposition);
+                    break;
+                case 'nostalgia':
+                    drawNostalgiaPlant(ctx, scale, reposition);
+                    break;
+                case 'regret':
+                    drawRegretPlant(ctx, scale, reposition);
+                    break;
+                case 'anger':
+                    drawAngerPlant(ctx, scale, reposition);
+                    break;
+            }
+
+            ctx.restore();
+        }
+
+        // Happiness: Round petals (flower)
+        function drawHappinessPlant(ctx, scale, rotation) {
+            const angle = (rotation / 100) * Math.PI * 2;
+            ctx.rotate(angle);
+
+            // Stem
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 50 * scale);
+            ctx.lineTo(0, -20 * scale);
+            ctx.stroke();
+
+            // Petals
+            ctx.fillStyle = '#888';
+            const petalCount = 8;
+            const petalRadius = 25 * scale;
+            const centerRadius = 15 * scale;
+
+            for (let i = 0; i < petalCount; i++) {
+                const petalAngle = (i / petalCount) * Math.PI * 2;
+                const x = Math.cos(petalAngle) * centerRadius;
+                const y = Math.sin(petalAngle) * centerRadius;
+
+                ctx.beginPath();
+                ctx.arc(x, y - 20 * scale, petalRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Center
+            ctx.fillStyle = '#555';
+            ctx.beginPath();
+            ctx.arc(0, -20 * scale, centerRadius * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Nostalgia: Long vines
+        function drawNostalgiaPlant(ctx, scale, rotation) {
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+
+            const offset = (rotation / 100) * 50 - 25;
+
+            // Main vine
+            ctx.beginPath();
+            ctx.moveTo(0, 80 * scale);
+
+            for (let i = 0; i < 10; i++) {
+                const x = Math.sin(i * 0.5 + offset * 0.1) * 30 * scale;
+                const y = 80 * scale - i * 15 * scale;
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Small leaves along vine
+            ctx.fillStyle = '#777';
+            for (let i = 2; i < 10; i += 2) {
+                const x = Math.sin(i * 0.5 + offset * 0.1) * 30 * scale;
+                const y = 80 * scale - i * 15 * scale;
+
+                ctx.beginPath();
+                ctx.ellipse(x - 15 * scale, y, 12 * scale, 6 * scale, -Math.PI / 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(x + 15 * scale, y, 12 * scale, 6 * scale, Math.PI / 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Regret: Thorns (thorny branch)
+        function drawRegretPlant(ctx, scale, rotation) {
+            const angle = (rotation / 100) * Math.PI / 2 - Math.PI / 4;
+            ctx.rotate(angle);
+
+            // Main branch
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 60 * scale);
+            ctx.lineTo(0, -60 * scale);
+            ctx.stroke();
+
+            // Thorns
+            ctx.fillStyle = '#666';
+            const thornCount = 12;
+            for (let i = 0; i < thornCount; i++) {
+                const y = 50 * scale - i * 10 * scale;
+                const side = i % 2 === 0 ? 1 : -1;
+
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(side * 15 * scale, y - 10 * scale);
+                ctx.lineTo(side * 8 * scale, y);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // Anger: Sharp leaves (aggressive plant)
+        function drawAngerPlant(ctx, scale, rotation) {
+            const offset = (rotation / 100) * Math.PI / 4;
+
+            // Central stem
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 70 * scale);
+            ctx.lineTo(0, -50 * scale);
+            ctx.stroke();
+
+            // Sharp leaves
+            ctx.fillStyle = '#666';
+            const leafCount = 6;
+            for (let i = 0; i < leafCount; i++) {
+                const y = 50 * scale - i * 20 * scale;
+                const side = i % 2 === 0 ? 1 : -1;
+                const angle = side * (Math.PI / 6 + offset);
+
+                ctx.save();
+                ctx.translate(0, y);
+                ctx.rotate(angle);
+
+                // Sharp triangular leaf
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(40 * scale, -10 * scale);
+                ctx.lineTo(35 * scale, 5 * scale);
+                ctx.closePath();
+                ctx.fill();
+
+                // Serrated edge
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(10 * scale, -5 * scale);
+                ctx.lineTo(15 * scale, -8 * scale);
+                ctx.lineTo(20 * scale, -6 * scale);
+                ctx.lineTo(25 * scale, -9 * scale);
+                ctx.lineTo(30 * scale, -7 * scale);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // Page Navigation
+        function showPage(pageNum) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById('page' + pageNum).classList.add('active');
+
+            if (pageNum === 3) {
+                renderGarden();
+            }
+        }
+
+        // Plant Memory (Page 1 -> Page 2)
+        function plantMemory() {
+            const input = document.getElementById('memoryInput');
+            const text = input.value.trim();
+
+            if (text === '') {
+                alert('Please write a memory first');
+                return;
+            }
+
+            currentMemory.text = text;
+            currentMemory.emotion = analyzeEmotion(text);
+            currentMemory.water = 50;
+            currentMemory.pruning = 50;
+            currentMemory.reposition = 50;
+
+            // Reset sliders
+            document.getElementById('waterSlider').value = 50;
+            document.getElementById('pruningSlider').value = 50;
+            document.getElementById('repositionSlider').value = 50;
+
+            // Show emotion
+            const emotionNames = {
+                happiness: 'Happiness → Round petals',
+                nostalgia: 'Nostalgia → Long vines',
+                regret: 'Regret → Thorns',
+                anger: 'Anger → Sharp leaves'
+            };
+            document.getElementById('emotionIndicator').textContent = emotionNames[currentMemory.emotion];
+
+            updatePlant();
+            showPage(2);
+        }
+
+        // Update Plant Preview (Page 2)
+        function updatePlant() {
+            currentMemory.water = parseInt(document.getElementById('waterSlider').value);
+            currentMemory.pruning = parseInt(document.getElementById('pruningSlider').value);
+            currentMemory.reposition = parseInt(document.getElementById('repositionSlider').value);
+
+            const canvas = document.getElementById('plantCanvas');
+            drawPlant(canvas, currentMemory.emotion, currentMemory.water, currentMemory.pruning, currentMemory.reposition);
+        }
+
+        // Add to Garden (Page 2 -> Page 3)
+        function addToGarden() {
+            // Random initial position
+            currentMemory.x = Math.random() * 400 + 100;
+            currentMemory.y = Math.random() * 300 + 100;
+            currentMemory.id = Date.now();
+
+            garden.push({...currentMemory});
+            saveGarden();
+
+            // Reset input
+            document.getElementById('memoryInput').value = '';
+
+            showPage(3);
+        }
+
+        // Render Garden (Page 3)
+        function renderGarden() {
+            const container = document.getElementById('gardenCanvas');
+            container.innerHTML = '';
+
+            if (garden.length === 0) {
+                container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999; font-style: italic;">Your garden is empty. Plant some memories to begin.</div>';
+                document.getElementById('gardenStats').innerHTML = '';
+                return;
+            }
+
+            // Calculate emotional balance
+            const emotionCounts = { happiness: 0, nostalgia: 0, regret: 0, anger: 0 };
+            garden.forEach(plant => {
+                emotionCounts[plant.emotion]++;
+            });
+
+            const dominant = Object.keys(emotionCounts).reduce((a, b) =>
+                emotionCounts[a] > emotionCounts[b] ? a : b
+            );
+
+            // Update stats
+            const statsDiv = document.getElementById('gardenStats');
+            statsDiv.innerHTML = `
+                <p>Total Memories: ${garden.length}</p>
+                <p>Dominant Emotion: ${dominant.charAt(0).toUpperCase() + dominant.slice(1)}</p>
+            `;
+
+            // Set background based on dominant emotion
+            const backgrounds = {
+                happiness: '#fafafa',
+                nostalgia: '#f5f5f5',
+                regret: '#efefef',
+                anger: '#e8e8e8'
+            };
+            container.style.background = backgrounds[dominant];
+
+            // Render each plant
+            garden.forEach((plant, index) => {
+                const plantDiv = document.createElement('div');
+                plantDiv.className = 'memory-plant';
+                plantDiv.style.left = plant.x + 'px';
+                plantDiv.style.top = plant.y + 'px';
+                plantDiv.dataset.index = index;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 150;
+                canvas.height = 150;
+                plantDiv.appendChild(canvas);
+
+                drawPlant(canvas, plant.emotion, plant.water, plant.pruning, plant.reposition);
+
+                // Drag functionality
+                let isDragging = false;
+                let startX, startY, offsetX, offsetY;
+                let longPressTimer;
+
+                plantDiv.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    offsetX = e.clientX - plant.x;
+                    offsetY = e.clientY - plant.y;
+
+                    // Long press to show text
+                    longPressTimer = setTimeout(() => {
+                        showTooltip(plant.text, e.clientX, e.clientY);
+                    }, 800);
+                });
+
+                plantDiv.addEventListener('touchstart', (e) => {
+                    isDragging = true;
+                    const touch = e.touches[0];
+                    startX = touch.clientX;
+                    startY = touch.clientY;
+                    offsetX = touch.clientX - plant.x;
+                    offsetY = touch.clientY - plant.y;
+
+                    longPressTimer = setTimeout(() => {
+                        showTooltip(plant.text, touch.clientX, touch.clientY);
+                    }, 800);
+                });
+
+                const handleMove = (clientX, clientY) => {
+                    if (isDragging) {
+                        clearTimeout(longPressTimer);
+                        const newX = clientX - offsetX;
+                        const newY = clientY - offsetY;
+
+                        // Constrain to container
+                        plant.x = Math.max(0, Math.min(container.offsetWidth - 150, newX));
+                        plant.y = Math.max(0, Math.min(container.offsetHeight - 150, newY));
+
+                        plantDiv.style.left = plant.x + 'px';
+                        plantDiv.style.top = plant.y + 'px';
+                    }
+                };
+
+                document.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+                document.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    handleMove(touch.clientX, touch.clientY);
+                });
+
+                const handleEnd = () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        clearTimeout(longPressTimer);
+                        saveGarden();
+                        hideTooltip();
+                    }
+                };
+
+                document.addEventListener('mouseup', handleEnd);
+                document.addEventListener('touchend', handleEnd);
+
+                container.appendChild(plantDiv);
+            });
+        }
+
+        // Tooltip functions
+        function showTooltip(text, x, y) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.textContent = text;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (x + 10) + 'px';
+            tooltip.style.top = (y + 10) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+        }
+
+        // Initialize
+        loadGarden();
+
+        // Enable/disable plant button based on input
+        document.getElementById('memoryInput').addEventListener('input', function() {
+            document.getElementById('plantButton').disabled = this.value.trim() === '';
+        });
+        document.getElementById('plantButton').disabled = true;
+    </script>
+</body>
+</html>
